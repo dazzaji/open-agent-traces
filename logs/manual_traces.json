@@ -1,36 +1,80 @@
 {
     "traces": [
         {
-            "id": "test-id",
+            "id": "process_e921cfb84de64a338e76016aa05fa318",
             "steps": [
                 {
-                    "stage": "test_stage",
-                    "timestamp": "2025-06-29T01:17:53.890960",
+                    "stage": "process_start",
+                    "timestamp": "2025-06-29T01:43:10.739742",
                     "inputs": {
-                        "input": "test"
+                        "timestamp": "2025-06-29T01:43:10.739738"
                     },
+                    "outputs": null
+                },
+                {
+                    "stage": "user_input",
+                    "timestamp": "2025-06-29T01:43:28.725843",
+                    "inputs": null,
                     "outputs": {
-                        "output": "result"
+                        "user_goal": "I need a plan for a workshop on legal aspects of AI agents that conduct transactions to purchase items for users.  It needs to look at 1) the contractual and general liability aspects for users, agent providers, and third party merchants that actually conduct the transactions with the user's AI agents, and 2) fiduciary duties for providers of the agents to the users who are deemed principals. The plan needs a simple scenario for the user/principal, AI agent provider (who is also the legal agent of the user/principal), and the third party merchants so participants can brainstorm the types of contractual provisions the users, agent providers, and third parties would all seek to have in place for these transactions.  The fiduciary relationship between the agent provider and the user will require corresponding contractual provisions."
                     }
+                },
+                {
+                    "stage": "module_start",
+                    "timestamp": "2025-06-29T01:43:28.727343",
+                    "inputs": {
+                        "user_goal": "I need a plan for a workshop on legal aspects of AI agents that conduct transactions to purchase items for users.  It needs to look at 1) the contractual and general liability aspects for users, agent providers, and third party merchants that actually conduct the transactions with the user's AI agents, and 2) fiduciary duties for providers of the agents to the users who are deemed principals. The plan needs a simple scenario for the user/principal, AI agent provider (who is also the legal agent of the user/principal), and the third party merchants so participants can brainstorm the types of contractual provisions the users, agent providers, and third parties would all seek to have in place for these transactions.  The fiduciary relationship between the agent provider and the user will require corresponding contractual provisions."
+                    },
+                    "outputs": null
+                },
+                {
+                    "stage": "trace_linked",
+                    "timestamp": "2025-06-29T01:43:28.727865",
+                    "inputs": {
+                        "openai_trace_id": "trace_3cca98b410704c888cdf699459ebf9ee"
+                    },
+                    "outputs": null
                 }
             ],
-            "timestamp_start": "2025-06-29T01:17:53.890958"
+            "timestamp_start": "2025-06-29T01:43:10.739740"
         }
     ],
     "current_trace": {
-        "id": "test-id",
+        "id": "process_e921cfb84de64a338e76016aa05fa318",
         "steps": [
             {
-                "stage": "test_stage",
-                "timestamp": "2025-06-29T01:17:53.890960",
+                "stage": "process_start",
+                "timestamp": "2025-06-29T01:43:10.739742",
                 "inputs": {
-                    "input": "test"
+                    "timestamp": "2025-06-29T01:43:10.739738"
                 },
+                "outputs": null
+            },
+            {
+                "stage": "user_input",
+                "timestamp": "2025-06-29T01:43:28.725843",
+                "inputs": null,
                 "outputs": {
-                    "output": "result"
+                    "user_goal": "I need a plan for a workshop on legal aspects of AI agents that conduct transactions to purchase items for users.  It needs to look at 1) the contractual and general liability aspects for users, agent providers, and third party merchants that actually conduct the transactions with the user's AI agents, and 2) fiduciary duties for providers of the agents to the users who are deemed principals. The plan needs a simple scenario for the user/principal, AI agent provider (who is also the legal agent of the user/principal), and the third party merchants so participants can brainstorm the types of contractual provisions the users, agent providers, and third parties would all seek to have in place for these transactions.  The fiduciary relationship between the agent provider and the user will require corresponding contractual provisions."
                 }
+            },
+            {
+                "stage": "module_start",
+                "timestamp": "2025-06-29T01:43:28.727343",
+                "inputs": {
+                    "user_goal": "I need a plan for a workshop on legal aspects of AI agents that conduct transactions to purchase items for users.  It needs to look at 1) the contractual and general liability aspects for users, agent providers, and third party merchants that actually conduct the transactions with the user's AI agents, and 2) fiduciary duties for providers of the agents to the users who are deemed principals. The plan needs a simple scenario for the user/principal, AI agent provider (who is also the legal agent of the user/principal), and the third party merchants so participants can brainstorm the types of contractual provisions the users, agent providers, and third parties would all seek to have in place for these transactions.  The fiduciary relationship between the agent provider and the user will require corresponding contractual provisions."
+                },
+                "outputs": null
+            },
+            {
+                "stage": "trace_linked",
+                "timestamp": "2025-06-29T01:43:28.727865",
+                "inputs": {
+                    "openai_trace_id": "trace_3cca98b410704c888cdf699459ebf9ee"
+                },
+                "outputs": null
             }
         ],
-        "timestamp_start": "2025-06-29T01:17:53.890958"
+        "timestamp_start": "2025-06-29T01:43:10.739740"
     }
 }
