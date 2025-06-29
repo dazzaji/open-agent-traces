@@ -1,28 +1,44 @@
 # Claude Guidance for Agento Observability Refactor
 
-Your job is to follow **DEVELOPER_PLAN.md** exactly; environment & permissions are in `.claude/settings.json`.
+**You are the coding agent for this repository.**  
+Follow **WORK_PLAN_V2.md** step-by-step; do **NOT** skip ahead.
 
-Follow **DEVELOPER_PLAN.md** exactly.  Runtime, env vars and explicit shell‐deny list are defined in `.claude/settings.json`.
+---
+
+## Environment & Safety
+* Allowed shell commands: anything **except** `rm*`, `shutdown*`, `curl*`, `wget*`.  
+* Runtime, env-vars and shell deny-list live in `.claude/settings.json`.  
+* If `OTEL_EXPORTER_OTLP_ENDPOINT` is `disabled`, tests must still pass.
 
 ---
 
 ## Workflow
 
-1. **Safety** – you may run *any* shell command **except** `rm*`, `shutdown*`, `curl*`, `wget*`.  
-2. **Implement plan** – complete Sections 3.1 → 3.8 in order.  
-3. **Red/green** – write or update tests first, then code; finish each cycle with `pytest -q`.  
-4. **Trace validation** – when tests pass, run  
-   ```bash
-   otel-validate logs/*.json
-````
+1. **Confirm ➜ Implement ➜ Validate ➜ Commit**  
+   * Start every session by summarising the _next_ work-plan item and asking for approval.  
+   * After coding, run  
+     ```bash
+     pytest -q
+     otel-validate logs/*.json
+     ```  
+   * If both commands succeed, show a concise `git diff --stat` and ask whether to commit.  
+   * Commit messages: one-line summary prefixed with the tag from **AGENTS.md § 4**.
 
-to confirm OTLP compliance.
-5\. **Commit** – one-line summary, optional body. Prefix with the tag from **AGENTS.md § 4**.
+2. **Test-first** – If tests are missing for an item, write/modify them _before_ changing code.  
+   * Unit tests now live in `tests/test_module1_tracing.py`.
+
+3. **Plan boundaries** – You may only modify files that an active work-plan item explicitly calls out.  
+   * If a change seems necessary but is _not_ in the plan, pause and ask.
 
 ---
 
 ## Quick reference
 
-* Unit tests: `tests/test_tracing.py`
-* Local collector config: `testdata/otelcol_file.yaml`
-* Analyst rollout doc: `docs/tracing_migration.md`
+| Purpose | Location |
+|---------|----------|
+| Work plan source of truth | `WORK_PLAN_V2.md` |
+| Shared OTEL utility | `agento_tracing.py` |
+| Module 1 entry point | `module1.py` |
+| Unit tests | `tests/test_module1_tracing.py` |
+| Local OTEL collector | `testdata/otelcol_file.yaml` |
+| Migration guide | `docs/tracing_migration.md` |

@@ -145,7 +145,7 @@ otelcol-contrib --config testdata/otelcol_file.yaml
 
 3. Run Module 1:
 ```bash
-python module1-opentelemetry-gm-1156.py
+python module1.py
 ```
 
 ### Production Setup with Jaeger
@@ -275,3 +275,10 @@ After Module 1, the same pattern will be applied to Modules 2-5:
 - Shared tracing utilities in `agento_tracing.py`
 - Consistent span naming: `agent.run`, `validation`, etc.
 - Trace ID propagation between modules via Links
+
+## Required Environment Variables
+
+- `OPENAI_API_KEY`: Your API key for OpenAI services.
+- `OTEL_EXPORTER_OTLP_ENDPOINT`: The URL of your OpenTelemetry collector (e.g., `http://localhost:4318/v1/traces`). Set to `disabled` to run without a collector.
+- `DEPLOYMENT_ENV`: (Optional) The deployment environment, e.g., `development` or `production`.
+- `OTEL_CONSOLE_EXPORT`: (Optional) Set to `true` to see trace data printed to the console for debugging.

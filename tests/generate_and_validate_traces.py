@@ -80,7 +80,7 @@ async def generate_test_traces():
         import importlib.util
         spec = importlib.util.spec_from_file_location(
             "module1", 
-            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "module1-opentelemetry-gm-1156.py")
+            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "module1.py")
         )
         module1 = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module1)

@@ -13,7 +13,7 @@ sys.path.insert(0, parent_dir)
 import importlib.util
 spec = importlib.util.spec_from_file_location(
     "module1_opentelemetry_gm_1156", 
-    os.path.join(parent_dir, "module1-opentelemetry-gm-1156.py")
+    os.path.join(parent_dir, "module1.py")
 )
 module1 = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module1)

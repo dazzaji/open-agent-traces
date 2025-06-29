@@ -58,7 +58,7 @@ otelcol-contrib --config testdata/otelcol_file.yaml
 
 3. Run Module 1:
 ```bash
-python module1-opentelemetry-gm-1156.py
+python module1.py
 ```
 
 ### Production Setup with Jaeger

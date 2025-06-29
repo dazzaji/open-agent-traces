@@ -20,7 +20,7 @@ The ultimate success of Agento depends not just on whether it completes a task, 
 
 ### **A. Starting Point: Multiple, Disparate Data Streams**
 
-Our starting point for this work is `module1-opentelemetry-gm-1156.py`. This module already contains three separate, parallel systems for capturing execution data:
+Our starting point for this work is `module1.py`. This module already contains three separate, parallel systems for capturing execution data:
 
 1. **A custom "Manual" trace (`manual_traces.json`):** Rich with complete data on inputs and outputs, but structurally naive and non-standard.
 2. **The native `openai-agents` SDK trace (`traces...json`):** Provides low-level detail on LLM API calls but lacks application context and is in a proprietary format.
@@ -56,20 +56,28 @@ The plan laid out for Module 1 will establish the definitive pattern for observa
 1. **Shared tracing utilities** – move the new `setup_opentelemetry()`, `safe_set()`, and `capture_event()` helpers into `agento_tracing.py` and have every module import them.
 2. **Uniform span taxonomy** – keep the span names predictable: `agent.run`, `validation`, `file_export`, etc., with `agent.name` attribute distinguishing roles.
 3. **Payload size discipline** – reuse the 8 KB rule everywhere so collectors never choke.
-4. **Trace-ID hand-off** – each module should *always* link to the trace ID received in the incoming JSON, forming a continuous causal chain.
+4. **Trace Propagation Contract** – To create a continuous trace, each module (from Module 2 onwards) MUST read a `trace_metadata` block from its input JSON. The `extract_parent_context` helper in `agento_tracing.py` will be used to start its root span as a child of the previous module's span. Each module MUST write its own `trace_metadata` to its output JSON.
 5. **Regression tests** – extend the new pytest harness so that each module’s test verifies:
 
    * presence of root span with `service.name = "Agento-Module-X"`
    * at least one `ai.prompt` and `ai.response` event
    * correct `Link` to previous module’s span.
-6. **Fail-fast policy** – CI should reject any PR that drops span coverage for required attributes/events.
-7. **Telemetry contract tests** – feed Module N-1 output into Module N in CI and assert the link and trace-id continuity; prevents accidental breaks.
+6. **Dual-mode CI Testing** – The CI pipeline must run tests twice: (1) with a live OTEL collector to test successful export, and (2) with `OTEL_EXPORTER_OTLP_ENDPOINT=disabled` to verify graceful degradation.
+7. **Fail-fast policy** – CI should reject any PR that drops span coverage for required attributes/events.
+8. **Telemetry contract tests** – feed Module N-1 output into Module N in CI and assert the link and trace-id continuity; prevents accidental breaks.
 
 By bedding these principles into Module 1 now, we lock in the pattern the rest of Agento will follow—guaranteeing that, when you later run cross-module analytics or automated quality gates, every crumb of reasoning is present, searchable, and attributable from the first user keystroke to the final outcome.
 
 ---
 
 ## **2. Action plan**
+
+### **2.A. Core Principles for Robust Observability**
+
+1. **SDK Decoupling:** Modules MUST NOT depend on any vendor SDK's tracing. Instrumentation must use the standard OpenTelemetry API via `agento_tracing.py`.
+2. **Centralized Utilities:** All modules MUST use `agento_tracing.py` for OTEL setup, span creation, and attribute setting.
+3. **Collector Fallback:** Modules must handle a missing OTLP collector gracefully.
+4. **Filename Convention:** Module scripts must follow `module<N>.py`.
 
 **2.1. Upgrade to pure-SDK OTLP export (no custom exporter in the hot path).**
    *Remember to set* `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf` *in dev and CI.*

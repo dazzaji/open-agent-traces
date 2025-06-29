@@ -20,7 +20,7 @@ The ultimate success of Agento depends not just on whether it completes a task, 
 
 ### **A. Starting Point: Multiple, Disparate Data Streams**
 
-Our starting point for this work is `module1-opentelemetry-gm-1156.py`. This module already contains three separate, parallel systems for capturing execution data:
+Our starting point for this work is `module1.py`. This module already contains three separate, parallel systems for capturing execution data:
 
 1. **A custom "Manual" trace (`manual_traces.json`):** Rich with complete data on inputs and outputs, but structurally naive and non-standard.
 2. **The native `openai-agents` SDK trace (`traces...json`):** Provides low-level detail on LLM API calls but lacks application context and is in a proprietary format.

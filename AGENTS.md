@@ -7,7 +7,7 @@
 
 ## 2. Repo Context
 You have two key inputs:
-*   `module1-opentelemetry-gm-1156.py` — file to refactor.
+*   `module1.py` — file to refactor.
 *   `DEVELOPER_PLAN.md` — authoritative change list.
 
 ## 3. Coding Conventions

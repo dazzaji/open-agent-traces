@@ -73,7 +73,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import importlib.util
 spec = importlib.util.spec_from_file_location(
     "module1", 
-    "module1-opentelemetry-gm-1156.py"
+    "module1.py"
 )
 module1 = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module1)
