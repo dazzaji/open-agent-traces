@@ -1,7 +1,6 @@
 {
   "version": "1.0",
   "projectName": "Agento",
-  "model": "anthropic/claude-opus-4",
   "permissions": {
     "allowShell": [
       "pytest",

@@ -52,11 +52,13 @@ from opentelemetry import trace as otel_trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import SERVICE_NAME, SERVICE_VERSION, Resource
+from opentelemetry.trace import Link, SpanContext, TraceFlags
 from contextlib import contextmanager
 import uuid
 import copy
+import random
 
 load_dotenv()  # Load environment variables
 
@@ -207,24 +209,28 @@ def capture_step(stage, inputs, outputs, trace_id=None):
             json.dump(MANUAL_TRACES, f, indent=4, default=str)
     except Exception as e:
         print(f"Error saving manual trace: {e}")
+    
+    # Dual write to OTEL
+    current_span = otel_trace.get_current_span()
+    if current_span and current_span.is_recording():
+        current_span.add_event(
+            f"capture.{stage}",
+            {"inputs": json.dumps(inputs, default=str) if inputs else "",
+             "outputs": json.dumps(outputs, default=str) if outputs else ""}
+        )
 
 # --- OpenTelemetry Setup ---
-def setup_opentelemetry(service_name="OpenAI-Agents-Tracing"):
+def setup_opentelemetry(service_name="Agento-Module-1"):
     """
-    Setup OpenTelemetry tracing with file and console exporters.
+    Setup OpenTelemetry tracing with OTLP exporter.
     Returns a tracer that can be used throughout the application.
     """
-    # Create logs directory for trace output files
-    logs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
-    os.makedirs(logs_dir, exist_ok=True)
-    
-    # Create a timestamped filename for this run
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    trace_file = os.path.join(logs_dir, f"otel_traces_{timestamp}.json")
-    
     # Create a resource to identify this service
-    resource = Resource(attributes={
-        SERVICE_NAME: service_name
+    resource = Resource.create({
+        SERVICE_NAME: service_name,
+        SERVICE_VERSION: "1.1.0",
+        "service.namespace": "agento",
+        "process.pid": os.getpid(),
     })
     
     # Create a tracer provider with the resource
@@ -323,20 +329,32 @@ def setup_opentelemetry(service_name="OpenAI-Agents-Tracing"):
             except Exception as e:
                 print(f"Error during shutdown: {e}")
     
-    # Create and register exporters
-    json_exporter = EnhancedJSONFileExporter(trace_file)
-    console_exporter = ConsoleSpanExporter()  # Prints to stdout for debugging
-    
-    # Add the exporters to the tracer provider
-    tracer_provider.add_span_processor(SimpleSpanProcessor(json_exporter))
-    tracer_provider.add_span_processor(SimpleSpanProcessor(console_exporter))
+    # Add processors for OTLP export
+    tracer_provider.add_span_processor(
+        BatchSpanProcessor(OTLPSpanExporter(
+            endpoint=os.getenv("OTEL_ENDPOINT", "http://localhost:4318/v1/traces")))
+    )
+    tracer_provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
     
     # Get a tracer from the provider
     tracer = otel_trace.get_tracer(__name__)
     
-    log_info(f"OpenTelemetry initialized with trace file: {trace_file}")
+    log_info(f"OpenTelemetry initialized with OTLP endpoint: {os.getenv('OTEL_ENDPOINT', 'http://localhost:4318/v1/traces')}")
     
     return tracer
+
+# Utility function for safe attribute setting
+MAX_ATTR = 8_192  # 8 KB
+
+def safe_set(span, key: str, value):
+    """Attach data safely – big payloads become events, plus a truncated attr."""
+    if not isinstance(value, str):
+        value = json.dumps(value, default=str)
+    if len(value) > MAX_ATTR:
+        span.set_attribute(f"{key}_truncated", value[:MAX_ATTR])
+        span.add_event("ai.payload.large", {key: value})
+    else:
+        span.set_attribute(key, value)
 
 # Context manager for creating rich spans with attributes
 @contextmanager
@@ -344,13 +362,9 @@ def traced_span(tracer, name, attributes=None, record_exception=True):
     """Context manager to create spans with rich attributes."""
     attributes = attributes or {}
     with tracer.start_as_current_span(name) as span:
-        # Set attributes on the span
+        # Set attributes on the span using safe_set
         for key, value in attributes.items():
-            if isinstance(value, (dict, list)):
-                # Convert complex objects to strings to ensure they can be serialized
-                span.set_attribute(key, json.dumps(value))
-            else:
-                span.set_attribute(key, str(value))
+            safe_set(span, key, value)
         
         try:
             yield span
@@ -361,6 +375,7 @@ def traced_span(tracer, name, attributes=None, record_exception=True):
                 span.set_status(otel_trace.StatusCode.ERROR, str(e))
             raise
         
+# TODO: remove after 2025-Q3
 class EnhancedFileTracingProcessor(TracingProcessor):
     """Custom processor to extract maximum content from traces and spans."""
 
@@ -846,26 +861,42 @@ async def validate_module1_output(
         
 async def run_module_1(user_goal: str, output_file: str, tracer, process_id: str) -> None:
     """Runs Module 1 with comprehensive tracing."""
-    # Start OpenTelemetry span for the module
-    with traced_span(tracer, "run_module_1", {"user_goal": user_goal}) as module_span:
-        context = RunContextWrapper(context=None)
+    context = RunContextWrapper(context=None)
+    openai_trace_id = None
+    
+    log_info(f"Starting Module 1 with goal: {user_goal}", truncate=True)
+    verbose_logger.info(f"Starting Module 1 with goal: {user_goal}")
+    
+    # Manual capture for module start
+    capture_step("module_start", {"user_goal": user_goal}, None, process_id)
+
+    # --- Wrap the entire module execution in a trace ---
+    with trace("Module 1 Trace") as current_trace:
+        # Get the OpenAI trace ID if available
         openai_trace_id = None
-
-        try:
-            log_info(f"Starting Module 1 with goal: {user_goal}", truncate=True)
-            verbose_logger.info(f"Starting Module 1 with goal: {user_goal}")
+        span_links = []
+        
+        if hasattr(current_trace, "trace_id"):
+            openai_trace_id = current_trace.trace_id
+            # Link manual trace to OpenAI trace
+            capture_step("trace_linked", {"openai_trace_id": openai_trace_id}, None, process_id)
             
-            # Manual capture for module start
-            capture_step("module_start", {"user_goal": user_goal}, None, process_id)
-
-            # --- Wrap the entire module execution in a trace ---
-            with trace("Module 1 Trace") as current_trace:
-                # Get the OpenAI trace ID if available
-                if hasattr(current_trace, "trace_id"):
-                    openai_trace_id = current_trace.trace_id
-                    module_span.set_attribute("openai_trace_id", openai_trace_id)
-                    # Link manual trace to OpenAI trace
-                    capture_step("trace_linked", {"openai_trace_id": openai_trace_id}, None, process_id)
+            # Create OpenAI trace context for linking
+            openai_ctx = SpanContext(
+                trace_id=int(openai_trace_id, 16),
+                span_id=random.getrandbits(64) or 1,  # ensure non-zero
+                trace_flags=TraceFlags(TraceFlags.SAMPLED),
+                is_remote=True
+            )
+            span_links = [Link(openai_ctx, {"source": "openai-agents-sdk"})]
+        
+        # Start OpenTelemetry span with or without link
+        with tracer.start_as_current_span(
+                "run_module_1",
+                links=span_links) as module_span:
+            module_span.set_attribute("user_goal", user_goal)
+            
+            try:
                 
                 # --- Run Search Agent ---
                 with traced_span(tracer, "search_agent", {"agent": "SearchAgent"}) as search_span:
@@ -892,10 +923,12 @@ async def run_module_1(user_goal: str, output_file: str, tracer, process_id: str
                         capture_step("search_complete", {"input": search_input}, {"search_summary": search_summary}, process_id)
                         
                         # OpenTelemetry capture
+                        safe_set(search_span, "ai.prompt", search_input)
+                        search_span.add_event("full_prompt", {"text": search_input})
+                        safe_set(search_span, "ai.response_excerpt", search_summary[:1000] if search_summary else "")
+                        search_span.add_event("full_response", {"search_summary": search_summary})
                         search_span.set_attribute("search_success", "true")
                         search_span.set_attribute("summary_length", str(len(search_summary)) if search_summary else "0")
-                        if search_summary:
-                            search_span.set_attribute("summary_excerpt", search_summary[:1000] if len(search_summary) > 1000 else search_summary)
                         
                         log_info(f"Search Agent returned (truncated): {search_summary[:200]}...", truncate=True)
                         verbose_logger.info(f"Search Agent returned (full): {search_summary}")
@@ -925,7 +958,8 @@ async def run_module_1(user_goal: str, output_file: str, tracer, process_id: str
                     capture_step("criteria_generation_start", {"input": criteria_input}, None, process_id)
                     
                     # OpenTelemetry capture
-                    criteria_span.set_attribute("input", criteria_input)
+                    safe_set(criteria_span, "ai.prompt", criteria_input)
+                    criteria_span.add_event("full_prompt", {"text": criteria_input})
 
                     # Run with trace_include_sensitive_data=True
                     criteria_result = await Runner.run(
@@ -945,7 +979,8 @@ async def run_module_1(user_goal: str, output_file: str, tracer, process_id: str
                     # OpenTelemetry capture
                     criteria_span.set_attribute("criteria_count", str(len(generated_criteria)))
                     criteria_summary = [{"criteria": c.criteria, "rating": c.rating} for c in generated_criteria]
-                    criteria_span.set_attribute("criteria_summary", json.dumps(criteria_summary))
+                    safe_set(criteria_span, "ai.response_excerpt", json.dumps(criteria_summary))
+                    criteria_span.add_event("full_response", {"generated_criteria": [c.model_dump() for c in generated_criteria]})
                     
                     log_info(f"Generated {len(generated_criteria)} success criteria", truncate=True)
                     verbose_logger.info(f"Generated {len(generated_criteria)} success criteria")
@@ -970,7 +1005,8 @@ async def run_module_1(user_goal: str, output_file: str, tracer, process_id: str
                     capture_step("criteria_evaluation_start", {"input": evaluation_input}, None, process_id)
                     
                     # OpenTelemetry capture
-                    eval_span.set_attribute("input_length", str(len(evaluation_input)))
+                    safe_set(eval_span, "ai.prompt", evaluation_input)
+                    eval_span.add_event("full_prompt", {"text": evaluation_input})
                     
                     log_info(f"Evaluation input (truncated): {evaluation_input[:500]}...", truncate=True)
                     verbose_logger.info(f"Evaluation input (full): {evaluation_input}")
@@ -993,7 +1029,8 @@ async def run_module_1(user_goal: str, output_file: str, tracer, process_id: str
                     # OpenTelemetry capture
                     eval_span.set_attribute("selected_count", str(len(selected_criteria)))
                     selected_summary = [{"criteria": c.criteria, "rating": c.rating} for c in selected_criteria]
-                    eval_span.set_attribute("selected_criteria", json.dumps(selected_summary))
+                    safe_set(eval_span, "ai.response_excerpt", json.dumps(selected_summary))
+                    eval_span.add_event("full_response", {"selected_criteria": [c.model_dump() for c in selected_criteria]})
                     
                     log_info(f"Selected {len(selected_criteria)} top criteria", truncate=True)
                     verbose_logger.info(f"Selected {len(selected_criteria)} top criteria")
@@ -1052,6 +1089,8 @@ async def run_module_1(user_goal: str, output_file: str, tracer, process_id: str
                                process_id)
                     
                     # OpenTelemetry capture
+                    output_span.add_event("module_output.full",
+                                          {"json": json.dumps(module_1_output.model_dump())})
                     output_span.set_attribute("guardrail_triggered", str(guardrail_result.output.tripwire_triggered))
                     if guardrail_result.output.output_info:
                         output_span.set_attribute("guardrail_info", str(guardrail_result.output.output_info))
@@ -1099,23 +1138,23 @@ async def run_module_1(user_goal: str, output_file: str, tracer, process_id: str
                     verbose_logger.info(f"Module 1 completed. Output saved to {output_file}")
                     verbose_logger.info(f"Timestamped output saved to {timestamped_file}")
 
-        except Exception as e:
-            logger.error(f"An error occurred in Module 1: {e}")
-            verbose_logger.error(f"An error occurred in Module 1: {e}")
-            import traceback
-            error_trace = traceback.format_exc()
-            logger.error(error_trace)
-            verbose_logger.error(error_trace)  # Log the full stack trace
-            
-            # Manual capture of error
-            capture_step("module_error", 
-                       {"user_goal": user_goal}, 
-                       {"error": str(e), "traceback": error_trace}, 
-                       process_id)
-            
-            # Record in OpenTelemetry
-            module_span.record_exception(e)
-            module_span.set_status(otel_trace.StatusCode.ERROR, str(e))
+            except Exception as e:
+                logger.error(f"An error occurred in Module 1: {e}")
+                verbose_logger.error(f"An error occurred in Module 1: {e}")
+                import traceback
+                error_trace = traceback.format_exc()
+                logger.error(error_trace)
+                verbose_logger.error(error_trace)  # Log the full stack trace
+                
+                # Manual capture of error
+                capture_step("module_error", 
+                           {"user_goal": user_goal}, 
+                           {"error": str(e), "traceback": error_trace}, 
+                           process_id)
+                
+                # Record in OpenTelemetry
+                module_span.record_exception(e)
+                module_span.set_status(otel_trace.StatusCode.ERROR, str(e))
 
 async def main():
     log_info("Starting main function", truncate=True)
@@ -1141,9 +1180,16 @@ async def main():
         os.makedirs(output_dir, exist_ok=True)
         output_file = os.path.join(output_dir, "module1_output.json")
 
-        # Set up both tracing systems
-        file_processor = EnhancedFileTracingProcessor()
-        add_trace_processor(file_processor)
+        # Set up legacy tracing if enabled
+        TRACE_LEGACY = os.getenv("TRACE_LEGACY", "0").lower() in ("1", "true", "yes")
+        file_processor = None
+        
+        if TRACE_LEGACY:
+            file_processor = EnhancedFileTracingProcessor()
+            add_trace_processor(file_processor)
+            log_info("Legacy file tracing enabled via TRACE_LEGACY environment variable", truncate=True)
+            # Add cleanup at exit
+            atexit.register(file_processor.shutdown)
         
         # Verify API key is set
         api_key = os.getenv("OPENAI_API_KEY")
@@ -1153,9 +1199,6 @@ async def main():
         else:
             log_info("WARNING: OPENAI_API_KEY not found in environment variables", truncate=True)
             parent_span.set_attribute("api_key_found", "false")
-
-        # Add cleanup at exit
-        atexit.register(file_processor.shutdown)
 
         # Update logging hooks with the tracer AND process_id
         global logging_hooks
