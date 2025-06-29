@@ -1,73 +1,39 @@
-# AGENTS.md
+# Agento — Module-1 Observability Guidance for Codex
+> Make Module-1 the reference implementation for spec-clean OTEL tracing.
 
-## Lake Merritt AI Evaluation Workbench
+## 1. Project Snapshot
+*   **Purpose**: Capture *every* prompt, decision, output, and timing signal in a single OTLP stream so later analyst modules can run causal, performance, and quality audits.
+*   **Stack**: Python 3.12, OpenTelemetry SDK 1.27, `opentelemetry-exporter-otlp-proto-http`, pytest.
 
-You are OpenAI Codex, working in code‑mode.
+## 2. Repo Context
+You have two key inputs:
+*   `module1-opentelemetry-gm-1156.py` — file to refactor.
+*   `DEVELOPER_PLAN.md` — authoritative change list.
 
-Project goal: implement Lake Merritt “Eval Packs” architecture (see docs/dev_plan.md).
+## 3. Coding Conventions
+1.  Format with **Black**, import-sort with **isort**, lint with **flake8**.
+2.  Span names **snake_case**; attributes **snake_case**.
+3.  Every new function needs Google-style docstrings.
 
-Always work on ONE numbered task at a time as directed by the user; write tests, make changes, run `pytest`, then commit and raise a PR that references the task id.
+## 4. Observability Tasks for Codex
+Implement incrementally; commit after each row.
 
-Whenever you are in doubt about the task or how it fits into the broader dev plan for the major upgrade your task is part of, always refer to the full dev plan in docs/dev_plan.md for the full context of this project.
+| #  | Commit prefix                       | Core task                                        | Verification                       |
+|:---|:------------------------------------|:-------------------------------------------------|:-----------------------------------|
+| 1  | `feat(obs): setup otlp exporter`    | Add OTLP exporter & Resource block.              | `pytest -q`                        |
+| 2  | `refactor(obs): implement safe_set` | Add `safe_set` utility & refactor spans.         | `pytest tests/test_tracing.py -k safe_set` |
+| 3  | `refactor(obs): add otel link`      | Replace `openai_trace_id` attr with OTEL Link.   | `pytest -q`                        |
+| 4  | `feat(obs): add legacy flag`        | Wrap `EnhancedFileTracingProcessor` in `TRACE_LEGACY`. | `TRACE_LEGACY=1 pytest -q`         |
+| 5  | `test(obs): add collector test`     | Add full unit-test harness.                      | `pytest tests/test_tracing.py`     |
+| 6  | `docs(obs): add migration notes`    | Write `docs/tracing_migration.md`.               | `ls docs/`                         |
 
-### Environment Setup
-This project requires Python 3.9+ (lately we run on python-3.13 actually) and defines dependencies in `pyproject.toml`.
-We use `uv` for fast, reliable dependency installation.
+## 5. Test Execution
+*   `make otel-local` spins up an **otelcol-contrib** container receiver.
+*   Pipeline must pass `pytest -q && otel-validate logs/*.json`.
+*   *If your distro ships `otelvalidate` not `otel-validate`, symlink accordingly.*
 
-### Testing Guidelines
+## 6. Safety & Limits
+Only the following commands may be executed (mirrors `.claude/settings.json`):
+`pytest`, `make`, `docker`, `otel-validate`, `otelcol-contrib`, `git`.
 
-**IMPORTANT**: Many tests require API keys that are not available in the CI environment. 
-Always run tests with the marker filter to skip API-dependent tests:
-
-```bash
-# Run all tests EXCEPT those requiring API keys
-pytest -v -m "not requires_api"
-
-# Run only unit tests (recommended for CI)
-pytest tests/unit -v -m "not requires_api"
-
-# If you need to run a specific test file
-pytest tests/unit/test_exact_match.py -v
-```
-
-### IMPORTANT: Testing Protocol
-1. NEVER run tests that require API keys
-2. ALWAYS use: pytest -v -m "not requires_api"
-3. If a test needs internet for pip, that's OK
-4. NEVER commit .env files or expose API keys
-
-### Code Style
-- Use Black for formatting
-- Type hints are required for all new functions
-- Docstrings follow Google style
-
-### Common Tasks
-- **Install dependencies**: `uv pip install -e ".[test,dev]"`
-- **Run safe tests**: `pytest -v -m "not requires_api"`
-- **Run a specific scorer test**: `pytest tests/unit/test_exact_match.py -v`
-- **Check types**: `mypy core --ignore-missing-imports`
-- **Format code**: `black core tests`
-
-### Test Categories
-- **Unit tests** (`tests/unit/`): Test individual components in isolation
-- **Integration tests** (`tests/integration/`): Test component interactions
-- **API tests**: Marked with `@pytest.mark.requires_api` - these need real API credentials
-
-### Important Notes
-- Do NOT commit API keys or .env files
-- The Streamlit app requires manual testing (not suitable for automated CI)
-- Focus test efforts on the `core/` module business logic
-- If uv is not available, fallback to regular pip
-- Tests marked with `requires_api` will be skipped in CI environments
-
-### Quick Test Commands
-```bash
-# Before committing - run the safe test suite
-pytest -v -m "not requires_api"
-
-# Test a specific module
-pytest tests/unit/test_exact_match.py -v
-
-# Run with coverage (excluding API tests)
-pytest -v -m "not requires_api" --cov=core --cov-report=term-missing
-```
+Large payloads (> 8 KB) go to an `ai.payload.large` event; store the first 8 KB in a `_truncated` attribute.

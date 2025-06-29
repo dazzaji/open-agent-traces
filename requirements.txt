@@ -1,8 +1,0 @@
-openai-agents
-openai
-python-dotenv
-pydantic
-protobuf
-opentelemetry-sdk
-opentelemetry-exporter-otlp
-opentelemetry-instrumentation

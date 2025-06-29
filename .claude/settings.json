@@ -1,45 +1,32 @@
 {
+  "version": "1.0",
+  "projectName": "Agento",
+  "model": "anthropic/claude-opus-4",
   "permissions": {
-    "file_system": {
-      "read": true,
-      "write": true,
-      "create": true,
-      "delete": true,
-      "move": true
-    },
-    "bash": {
-      "enabled": true,
-      "commands": {
-        "allow_all": true
-      }
-    },
-    "web": {
-      "enabled": true,
-      "domains": ["*"]
-    }
+    "allowShell": [
+      "pytest",
+      "docker",
+      "make",
+      "otel-validate",
+      "otelcol-contrib",
+      "git"
+    ],
+    "denyShell": ["rm", "shutdown", "curl", "wget"]
   },
-  "auto_approve": {
-    "file_edits": true,
-    "file_creates": true,
-    "bash_commands": true,
-    "web_requests": true
+  "env": {
+    "OTEL_ENDPOINT": "http://localhost:4318/v1/traces",
+    "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
+    "TRACE_LEGACY": "0"
   },
-  "context": {
-    "max_tokens": 200000,
-    "include_file_contents": true,
-    "auto_refresh": true
+  "observability": {
+    "service.name": "Agento-Module-1",
+    "service.namespace": "agento",
+    "service.version": "1.1.0"
   },
-  "development": {
-    "test_runner": "pytest",
-    "python_path": "venv/bin/python",
-    "auto_lint": false,
-    "auto_format": false
+  "tests": {
+    "entryPoint": "pytest -q",
+    "requiredFiles": ["tests/test_tracing.py"]
   },
-  "project": {
-    "type": "python",
-    "name": "Agent Otel for Lake Merritt Eval Packs",
-    "description": "AI evaluation workbench eval pack components",
-    "main_branch": "main",
-    "working_branch": "feature/eval-packs-june-28"
-  }
+  "autoSave": true,
+  "contextFiles": ["CLAUDE.md", "DEVELOPER_PLAN.md"]
 }

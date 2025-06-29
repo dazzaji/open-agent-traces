@@ -1,0 +1,13 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: "localhost:4318"
+exporters:
+  file:
+    path: ./test-traces.json   # overridden by the test harness
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [file]otelcol_file.yaml
