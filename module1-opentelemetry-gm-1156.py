@@ -5,7 +5,7 @@
 # uv pip install openai-agents
 # uv pip install python-dotenv
 # uv pip install opentelemetry-sdk opentelemetry-exporter-otlp opentelemetry-instrumentation
-# python module1.py  # Input your goal or idea and get success criteria
+# python module1-opentelemetry-gm-1156.py  # Input your goal or idea and get success criteria
 # python module2.py  # Creates and selects a plan
 # python module3.py  # Expands and evaluates the plan
 # python module3-claude.py  # Better expands and evaluates the plan
