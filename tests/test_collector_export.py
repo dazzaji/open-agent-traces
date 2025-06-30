@@ -78,18 +78,18 @@ def test_module_export():
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     
     # Import module
-    from module1_opentelemetry_gm_1156 import setup_opentelemetry
+    from module1 import setup_opentelemetry
     
     # Setup tracing
     os.environ["OTEL_ENDPOINT"] = "http://localhost:4318/v1/traces"
     os.environ["OTEL_EXPORTER_OTLP_PROTOCOL"] = "http/protobuf"
     
-    tracer = setup_opentelemetry("test-service")
+    tracer = setup_opentelemetry("test-service", module_number=1)
     
     # Create a test span with all our features
     with tracer.start_as_current_span("test_span") as span:
         # Test safe_set with small value
-        from module1_opentelemetry_gm_1156 import safe_set
+        from agento_tracing import safe_set
         safe_set(span, "test_attribute", "small value")
         
         # Test safe_set with large value

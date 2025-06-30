@@ -1,44 +1,52 @@
-# Claude Guidance for Agento Observability Refactor
+# Claude Guidance – Agento Observability Cleanup (WORK_PLAN_V4)
 
-**You are the coding agent for this repository.**  
-Follow **WORK_PLAN_V2.md** step-by-step; do **NOT** skip ahead.
+You are the coding agent for this repository.  
+Follow **WORK_PLAN_V4.md** *exactly*, step by step. Do **NOT** skip ahead.
 
 ---
 
 ## Environment & Safety
-* Allowed shell commands: anything **except** `rm*`, `shutdown*`, `curl*`, `wget*`.  
-* Runtime, env-vars and shell deny-list live in `.claude/settings.json`.  
-* If `OTEL_EXPORTER_OTLP_ENDPOINT` is `disabled`, tests must still pass.
+* Allowed shell commands: anything **except** `rm*`, `shutdown*`, `curl*`, `wget*`.
+* Runtime, env-vars, and the shell deny-list live in `.claude/settings.json`.
+* If `OTEL_EXPORTER_OTLP_ENDPOINT` is `disabled`, all tests must still pass.
 
 ---
 
 ## Workflow
 
-1. **Confirm ➜ Implement ➜ Validate ➜ Commit**  
-   * Start every session by summarising the _next_ work-plan item and asking for approval.  
-   * After coding, run  
+1. **Confirm → Implement → Validate → Commit**  
+   * Start every session by summarising the *next unchecked* work-plan item and asking for approval.  
+   * After coding, run:  
      ```bash
      pytest -q
-     otel-validate logs/*.json
      ```  
-   * If both commands succeed, show a concise `git diff --stat` and ask whether to commit.  
+     If tests succeed:  
+     ```bash
+     ./otelcol-contrib --config testdata/otelcol_file.yaml || otelcol --config testdata/otelcol_file.yaml
+     python module1.py  # supply a sample goal when prompted
+     python tests/validate_otlp_traces.py ./test-traces.json
+     ```  
+   * When all commands succeed, show `git diff --stat` and ask whether to commit.  
    * Commit messages: one-line summary prefixed with the tag from **AGENTS.md § 4**.
 
-2. **Test-first** – If tests are missing for an item, write/modify them _before_ changing code.  
-   * Unit tests now live in `tests/test_module1_tracing.py`.
+2. **Test-first**  
+   * If a work-plan item lacks adequate coverage, write or modify tests *before* changing code.  
+   * Primary suite lives in `tests/test_module1_tracing.py`.
 
-3. **Plan boundaries** – You may only modify files that an active work-plan item explicitly calls out.  
-   * If a change seems necessary but is _not_ in the plan, pause and ask.
+3. **Plan boundaries**  
+   * Touch only files explicitly mentioned by the current work-plan item.  
+   * If a required change isn’t covered, pause and ask before proceeding.
 
 ---
 
 ## Quick reference
 
-| Purpose | Location |
-|---------|----------|
-| Work plan source of truth | `WORK_PLAN_V2.md` |
+| Purpose | Path |
+|---------|------|
+| Source of truth work plan | `WORK_PLAN_V4.md` |
 | Shared OTEL utility | `agento_tracing.py` |
 | Module 1 entry point | `module1.py` |
 | Unit tests | `tests/test_module1_tracing.py` |
-| Local OTEL collector | `testdata/otelcol_file.yaml` |
+| OTEL collector config | `testdata/otelcol_file.yaml` |
+| Trace validation helper | `tests/validate_otlp_traces.py` |
 | Migration guide | `docs/tracing_migration.md` |

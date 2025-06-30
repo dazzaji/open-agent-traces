@@ -106,7 +106,7 @@ def test_graceful_degradation_with_disabled_endpoint():
         # This test passes if no exception is raised
 
 
-@patch('module1.OTLPSpanExporter')
+@patch('agento_tracing.OTLPSpanExporter')
 def test_collector_fallback(mock_exporter_class):
     """Test graceful fallback when OTLP exporter fails to initialize."""
     # Make the OTLP exporter raise an exception
@@ -114,6 +114,8 @@ def test_collector_fallback(mock_exporter_class):
     
     # Import and setup should not crash
     import importlib
+    import agento_tracing
+    importlib.reload(agento_tracing)
     importlib.reload(module1)
     
     # This test passes if no exception is raised during module import

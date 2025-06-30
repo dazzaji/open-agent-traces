@@ -1,0 +1,22 @@
+{
+    "goal": "Create a mobile app for tracking daily water intake",
+    "success_criteria": [
+        {
+            "criteria": "Mock Criterion 1",
+            "reasoning": "Reason 1",
+            "rating": 8
+        }
+    ],
+    "selected_criteria": [
+        {
+            "criteria": "Mock Selected Criterion",
+            "reasoning": "Selected",
+            "rating": 9
+        }
+    ],
+    "trace_metadata": {
+        "trace_id": "5f2bcefb7f0b26b23052aa63648f8c79",
+        "parent_span_id": "b21ff4ae3f194a8c",
+        "service_name": "Agento-Module-1"
+    }
+}
