@@ -1,52 +1,60 @@
-# Claude Guidance – Agento Observability Cleanup (WORK_PLAN_V4)
+# Claude Guidance – Agento Observability Logic Restore (WORK_PLAN_V5)
 
 You are the coding agent for this repository.  
-Follow **WORK_PLAN_V4.md** *exactly*, step by step. Do **NOT** skip ahead.
+Follow **WORK_PLAN_V5.md** *exactly*; do **NOT** skip ahead.
 
 ---
 
 ## Environment & Safety
 * Allowed shell commands: anything **except** `rm*`, `shutdown*`, `curl*`, `wget*`.
-* Runtime, env-vars, and the shell deny-list live in `.claude/settings.json`.
-* If `OTEL_EXPORTER_OTLP_ENDPOINT` is `disabled`, all tests must still pass.
+* Runtime, env-vars, and deny-list live in `.claude/settings.json`.
+* The project must work whether `OTEL_EXPORTER_OTLP_ENDPOINT` points to a collector or is set to `disabled`.
 
 ---
 
 ## Workflow
 
-1. **Confirm → Implement → Validate → Commit**  
-   * Start every session by summarising the *next unchecked* work-plan item and asking for approval.  
-   * After coding, run:  
+1. **Confirm → Implement → Validate → Commit**
+   * Start every turn by summarising the **next unchecked** work-plan item and asking for approval.  
+   * After coding, run:
      ```bash
      pytest -q
-     ```  
-     If tests succeed:  
+     ```
+   * If the tests pass:
      ```bash
-     ./otelcol-contrib --config testdata/otelcol_file.yaml || otelcol --config testdata/otelcol_file.yaml
-     python module1.py  # supply a sample goal when prompted
+     uv pip install -e ".[dev]"  # install/update deps if needed
+     ./otelcol-contrib --config testdata/otelcol_file.yaml || otelcol --config testdata/otelcol_file.yaml &
+     python module1.py           # supply a dummy goal when prompted
      python tests/validate_otlp_traces.py ./test-traces.json
-     ```  
-   * When all commands succeed, show `git diff --stat` and ask whether to commit.  
+     ```
+   * Show `git diff --stat` and ask whether to commit.  
    * Commit messages: one-line summary prefixed with the tag from **AGENTS.md § 4**.
 
-2. **Test-first**  
-   * If a work-plan item lacks adequate coverage, write or modify tests *before* changing code.  
-   * Primary suite lives in `tests/test_module1_tracing.py`.
+2. **Test-first**
+   * If an item lacks adequate coverage, extend `tests/test_module1_tracing.py` before changing code.
 
-3. **Plan boundaries**  
-   * Touch only files explicitly mentioned by the current work-plan item.  
-   * If a required change isn’t covered, pause and ask before proceeding.
+3. **Stay within plan scope**
+   * Modify only the files explicitly mentioned in the current work-plan item.  
+   * If a change seems necessary but isn’t covered, pause and ask for guidance.
 
 ---
 
 ## Quick reference
 
-| Purpose | Path |
-|---------|------|
-| Source of truth work plan | `WORK_PLAN_V4.md` |
-| Shared OTEL utility | `agento_tracing.py` |
-| Module 1 entry point | `module1.py` |
-| Unit tests | `tests/test_module1_tracing.py` |
-| OTEL collector config | `testdata/otelcol_file.yaml` |
-| Trace validation helper | `tests/validate_otlp_traces.py` |
-| Migration guide | `docs/tracing_migration.md` |
+| Purpose                       | Path                                         |
+|-------------------------------|----------------------------------------------|
+| Source-of-truth work plan     | `WORK_PLAN_V5.md`                            |
+| Shared OTEL utility           | `agento_tracing.py`                          |
+| Module 1 entry point          | `module1.py`                                 |
+| Unit tests                    | `tests/test_module1_tracing.py`              |
+| OTEL collector config         | `testdata/otelcol_file.yaml`                 |
+| Trace validation helper       | `tests/validate_otlp_traces.py`              |
+| Migration guide               | `docs/tracing_migration.md` (if present)     |
+
+---
+
+### Claude-specific tips
+
+* Keep task prompts **concise and explicit** (≤ 200 tokens).  
+* Use the *diff → confirm → commit* loop to minimise context drift.  
+* When restoring agent logic, patch only the network call (`AsyncOpenAI.chat.completions.create`) in tests; don’t re-introduce the OpenAI Agent SDK.

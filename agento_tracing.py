@@ -73,6 +73,21 @@ def safe_set(span: Span, key: str, value: Any):
 
 @contextmanager
 def traced_span(tracer: otel_trace.Tracer, name: str, attributes: Optional[Dict] = None):
+    """Context manager for creating traced spans with automatic error handling.
+    
+    Args:
+        tracer: The OpenTelemetry tracer to use for creating spans.
+        name: The name of the span.
+        attributes: Optional dictionary of attributes to set on the span.
+    
+    Yields:
+        The created span object.
+    
+    Note:
+        - Automatically records exceptions and sets error status on failure.
+        - Uses safe_set for all attributes to handle large payloads.
+        - Re-raises any exceptions after recording them.
+    """
     with tracer.start_as_current_span(name) as span:
         if attributes:
             for k, v in attributes.items():
