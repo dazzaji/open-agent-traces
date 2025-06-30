@@ -385,7 +385,7 @@ Installed 31 packages in 26ms
  + typing-inspection==0.4.1
  + urllib3==2.5.0
  + zipp==3.23.0
-(open-agent-traces) dazzagreenwood@Dazzas-MacBook-Air open-agent-traces % export OPENAI_API_KEY=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
+(open-agent-traces) dazzagreenwood@Dazzas-MacBook-Air open-agent-traces % export OPENAI_API_KEY=REDACTED
 (open-agent-traces) dazzagreenwood@Dazzas-MacBook-Air open-agent-traces % export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318/v1/traces"
 (open-agent-traces) dazzagreenwood@Dazzas-MacBook-Air open-agent-traces % export OTEL_CONSOLE_EXPORT="true"
 (open-agent-traces) dazzagreenwood@Dazzas-MacBook-Air open-agent-traces % ./otelcol-contrib --config testdata/otelcol_file.yaml
